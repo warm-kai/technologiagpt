@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Technologia GPT</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #ffffff;
+      --secondary-color: #cccccc;
+      --background-color: #000000;
+      --card-bg: #1a1a1a;
+      --text-color: #ffffff;
+      --border-color: #666666;
+      --math-bg: #2a2a2a;
+      --hover-bg: #333333;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Press Start 2P', monospace;
+      background: var(--background-color);
+      color: var(--text-color);
+      display: flex;
+      min-height: 100vh;
+      overscroll-behavior: none;
+      font-size: 14px;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: 100vh;
+      width: 100%;
+      transition: all 0.3s ease;
+    }
+    .sidebar {
+      grid-column: 1;
+      background: var(--card-bg);
+      padding: 1.5rem;
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .sidebar h2 {
+      color: var(--primary-color);
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    .search-bar {
+      width: 100%;
+      padding: 0.6rem;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--background-color);
+      color: var(--text-color);
+      font-size: 0.9rem;
+      transition: border-color 0.3s ease;
+    }
+    .search-bar:focus {
+      outline: none;
+      border-color: var(--secondary-color);
+    }
+    .history-topic {
+      cursor: pointer;
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      background: var(--card-bg);
+      transition: all 0.3s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      user-select: none;
+    }
+    .history-topic:hover {
+      background: var(--hover-bg);
+      color: var(--text-color);
+      animation: wiggle 0.4s ease-in-out;
+    }
+    .history-topic.pinned::before {
+      content: '📌 ';
+      margin-right: 0.5rem;
+    }
+    .new-chat-btn {
+      width: 100%;
+      padding: 0.8rem;
+      background: var(--primary-color);
+      color: #000000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      text-align: center;
+      transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .new-chat-btn:hover {
+      background: var(--secondary-color);
+      transform: scale(1.05);
+      animation: glow 1s ease-in-out infinite;
+    }
+    .chat-container {
+      grid-column: 2;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .topic-title {
+      padding: 1rem;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      color: var(--primary-color);
+      font-size: 1rem;
+      font-weight: bold;
+      text-align: center;
+    }
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      max-height: calc(100vh - 140px);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-color) var(--card-bg);
+    }
+    #messages {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-height: 100%;
+    }
+    .message {
+      margin-bottom: 1rem;
+      padding: 1.2rem;
+      border-radius: 12px;
+      line-height: 1.6;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+      position: relative;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: slideIn 0.5s ease forwards;
+    }
+    .user-message {
+      background: #ffffff;
+      color: #000000;
+      align-self: flex-end;
+      max-width: 70%;
+      border-bottom-right-radius: 2px;
+    }
+    .ai-message {
+      background: var(--card-bg);
+      color: var(--text-color);
+      align-self: flex-start;
+      max-width: 80%;
+      padding: 1.5rem;
+      box-shadow: 0 3px 12px rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      border-left: 4px solid var(--border-color);
+    }
+    .ai-message p, .ai-message li {
+      margin-bottom: 1.2rem;
+      line-height: 1.6;
+      font-size: 0.95rem;
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      animation: typewriter 3s steps(40, end) forwards;
+    }
+    .ai-message p::after, .ai-message li::after {
+      content: '|';
+      position: absolute;
+      right: 0;
+      animation: cursorBlink 0.8s step-end infinite;
+    }
+    .ai-message .math {
+      background: var(--math-bg);
+      padding: 0.8rem;
+      border-radius: 8px;
+      margin: 0.8rem 0;
+      display: inline-block;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 1.1rem;
+      animation: fadeInMath 0.7s ease;
+      line-height: 1.5;
+    }
+    .ai-message .math.display {
+      background: var(--math-bg);
+      padding: 1rem;
+      margin: 1rem 0;
+      text-align: center;
+      border: 1px solid var(--border-color);
+    }
+    .ai-message .final-answer {
+      background: var(--math-bg);
+      border: 1px solid var(--border-color);
+      padding: 1rem;
+      margin: 1rem auto;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      font-family: 'Press Start 2P', monospace;
+      line-height: 1.5;
+    }
+    .input-area {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border-color);
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+    }
+    .subject-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-right: 1rem;
+    }
+    .subject-btn {
+      padding: 0.6rem 1rem;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--background-color);
+      color: var(--text-color);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .subject-btn.active, .subject-btn:hover {
+      background: var(--primary-color);
+      color: #000000;
+      transform: scale(1.05);
+      animation: glow 1s ease-in-out infinite;
+    }
+    textarea {
+      flex: 1;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem;
+      font-size: 0.9rem;
+      background: var(--background-color);
+      color: var(--text-color);
+      height: 60px;
+      resize: none;
+      transition: border-color 0.3s ease;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: var(--secondary-color);
+    }
+    button {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      font-size: 1.3rem;
+      cursor: pointer;
+      margin-left: 1rem;
+      transition: color 0.3s ease;
+    }
+    button:hover {
+      color: var(--secondary-color);
+    }
+    .typing {
+      display: flex;
+      align-items: center;
+      color: var(--secondary-color);
+      margin-bottom: 1rem;
+      background: var(--card-bg);
+      padding: 0.5rem;
+      border-radius: 8px;
+    }
+    .typing span {
+      width: 10px;
+      height: 10px;
+      background: var(--secondary-color);
+      border-radius: 50%;
+      margin: 0 3px;
+      animation: pulse 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    .copy-icon {
+      position: absolute;
+      right: 15px;
+      bottom: -25px;
+      cursor: pointer;
+      font-size: 1.3rem;
+      transition: color 0.3s ease;
+    }
+    .user-message .copy-icon {
+      color: #000000;
+    }
+    .ai-message .copy-icon {
+      color: #ffffff;
+    }
+    .copy-icon.copied {
+      color: var(--secondary-color);
+    }
+    #scrollToBottom {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary-color);
+      color: #000000;
+      border: none;
+      padding: 12px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.3rem;
+      z-index: 10;
+      display: none;
+      transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    #scrollToBottom:hover {
+      background: var(--secondary-color);
+      transform: translateX(-50%) scale(1.1);
+      animation: glow 1s ease-in-out infinite;
+    }
+    .confirmation-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2rem;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      animation: popIn 0.3s ease;
+    }
+    .confirmation-dialog h3 {
+      color: var(--text-color);
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .confirmation-dialog p {
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+    .confirmation-dialog button {
+      padding: 0.6rem 1.2rem;
+      margin: 0 0.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+    .confirmation-dialog .confirm-btn {
+      background: var(--primary-color);
+      color: #000000;
+    }
+    .confirmation-dialog .confirm-btn:hover {
+      background: var(--secondary-color);
+      animation: glow 1s ease-in-out infinite;
+    }
+    .confirmation-dialog .cancel-btn {
+      background: #666666;
+      color: #ffffff;
+    }
+    .confirmation-dialog .cancel-btn:hover {
+      background: #555555;
+      animation: glow 1s ease-in-out infinite;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.3);
+      z-index: 99;
+      display: none;
+    }
+    .context-menu {
+      position: absolute;
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.5rem;
+      z-index: 101;
+      display: none;
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+      animation: popIn 0.3s ease;
+    }
+    .context-menu div {
+      padding: 0.6rem 1.2rem;
+      cursor: pointer;
+      color: var(--text-color);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      border-radius: 4px;
+    }
+    .context-menu div:hover {
+      background: var(--primary-color);
+      color: #000000;
+      transform: translateX(3px);
+      animation: glow 1s ease-in-out infinite;
+    }
+    @keyframes slideIn {
+      0% { opacity: 0; transform: translateY(20px); }
+      80% { opacity: 0.8; transform: translateY(0) scale(1.05); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes fadeInMath {
+      0% { opacity: 0; transform: translateY(10px) translateX(-2px); }
+      50% { transform: translateY(0) translateX(2px); }
+      100% { opacity: 1; transform: translateY(0) translateX(0); }
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+      50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+      100% { transform: scale(1); opacity: 1; box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; box-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+      50% { transform: scale(1.8); opacity: 1; box-shadow: 0 0 5px rgba(255, 255, 255, 0.4); }
+    }
+    @keyframes typewriter {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    @keyframes cursorBlink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+      50% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.6); }
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: translateX(5px) rotate(0deg); }
+      25% { transform: translateX(5px) rotate(2deg); }
+      75% { transform: translateX(5px) rotate(-2deg); }
+    }
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: fixed;
+        left: -280px;
+        width: 280px;
+        height: 100%;
+        z-index: 100;
+        transition: left 0.3s ease;
+      }
+      .sidebar.active {
+        left: 0;
+      }
+      .chat-container {
+        grid-column: 1;
+      }
+      .toggle-sidebar {
+        display: block;
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        background: var(--primary-color);
+        color: #000000;
+        padding: 0.5rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        z-index: 101;
+      }
+      .ai-message .math { font-size: 1rem; }
+      .ai-message .final-answer { font-size: 1.1rem; }
+      .message, .ai-message p, .ai-message li { font-size: 0.8rem; }
+      .topic-title { font-size: 0.9rem; }
+      .subject-btn, .new-chat-btn, .search-bar, textarea, .confirmation-dialog h3, .confirmation-dialog p, .context-menu div { font-size: 0.8rem; }
+    }
+  </style>
+  <!-- MathJax Configuration -->
+  <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      TeX: {
+        equationNumbers: {
+          autoNumber: "AMS",
+          useLabelIds: true
+        },
+        extensions: ["AMSmath.js", "AMSsymbols.js"]
+      },
+      tex2jax: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processEnvironments: true
+      },
+      displayAlign: 'center',
+      CommonHTML: {
+        linebreaks: { automatic: true },
+        scale: 100,
+        minScaleAdjust: 50
+      },
+      "HTML-CSS": {
+        linebreaks: { automatic: true },
+        scale: 100,
+        availableFonts: [],
+        webFont: "Press Start 2P",
+        preferredFont: "Press Start 2P",
+        matchFontHeight: true,
+        styles: {
+          ".MJXc-display, .MathJax_Display": {
+            "font-family": "'Press Start 2P', monospace !important",
+            "line-height": "1.5"
+          },
+          ".MJXc-TeX-math-I, .MJXc-TeX-math-Ix": {
+            "font-family": "'Press Start 2P', monospace !important"
+          }
+        }
+      },
+      skipStartupTypeset: true
+    });
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML-full,Safe"></script>
+</head>
+<body>
+  <button class="toggle-sidebar" id="toggleSidebar" aria-label="Toggle sidebar"><i class="fas fa-bars"></i></button>
+  <div class="container">
+    <div class="sidebar" id="sidebar">
+      <h2>Technologia GPT</h2>
+      <input type="text" id="searchBar" class="search-bar" placeholder="Search topics..." aria-label="Search conversation topics"/>
+      <button id="newChatBtn" class="new-chat-btn" aria-label="Start new chat"><i class="fas fa-plus"></i> New Chat</button>
+      <div id="historyList"></div>
+    </div>
+    <div class="chat-container">
+      <div class="topic-title" id="topicTitle" aria-live="polite"></div>
+      <div class="chat-area" id="chatArea">
+        <div id="messages"></div>
+        <div id="typing" class="typing" style="display: none;" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <button id="scrollToBottom" aria-label="Scroll to bottom"><i class="fas fa-arrow-down"></i></button>
+      <div class="input-area">
+        <div class="subject-buttons">
+          <button class="subject-btn active" data-subject="Maths">Maths</button>
+          <button class="subject-btn" data-subject="English">English</button>
+          <button class="subject-btn" data-subject="Science">Science</button>
+          <button class="subject-btn" data-subject="Hindi">Hindi</button>
+        </div>
+        <textarea id="question" placeholder="Type your question..." aria-label="Enter your question"></textarea>
+        <button id="sendBtn" aria-label="Send question"><i class="fas fa-paper-plane"></i></button>
+      </div>
+      <div class="overlay" id="overlay" aria-hidden="true"></div>
+      <div class="confirmation-dialog" id="confirmationDialog" role="dialog" aria-labelledby="confirmationDialogTitle">
+        <h3 id="confirmationDialogTitle">Delete Chat?</h3>
+        <p>Are you sure you want to delete "<span id="topicToDelete"></span>"?</p>
+        <div>
+          <button class="confirm-btn" id="confirmDelete" aria-label="Confirm deletion">Delete</button>
+          <button class="cancel-btn" id="cancelDelete" aria-label="Cancel deletion">Cancel</button>
+        </div>
+      </div>
+      <div class="context-menu" id="contextMenu" role="menu">
+        <div id="contextDelete" role="menuitem">Delete</div>
+        <div id="contextRename" role="menuitem">Rename</div>
+        <div id="contextPin" role="menuitem">Pin</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="js/index.js"></script>
+</body>
+</html>
